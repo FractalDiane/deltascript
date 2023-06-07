@@ -105,11 +105,11 @@ func _exit_tree() -> void:
 
 			
 func initial_load() -> void:
-	var dialogue_script_path = ProjectSettings.get_setting(&"deltascript/scripts/dialogue_script", String())
+	var dialogue_script_path: String = ProjectSettings.get_setting(&"deltascript/scripts/dialogue_script", String())
 	if not dialogue_script_path.is_empty():
 		dialogue_script = load(dialogue_script_path) as GDScript
 		
-	var choice_script_path = ProjectSettings.get_setting(&"deltascript/scripts/choice_script", String())
+	var choice_script_path: String = ProjectSettings.get_setting(&"deltascript/scripts/choice_script", String())
 	if not choice_script_path.is_empty():
 		choice_script = load(choice_script_path) as GDScript
 		
