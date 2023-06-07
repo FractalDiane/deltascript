@@ -1,4 +1,4 @@
-class_name DeltascriptLineChoiceBase
+class_name DeltascriptTagChoiceBase
 extends DeltascriptLine
 
 var line_choice_texts: Array[String] = []

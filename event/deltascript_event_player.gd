@@ -1,6 +1,8 @@
 class_name DeltascriptEventPlayer
 extends Node
 
+signal initial_load_complete()
+signal load_complete()
 signal event_finished()
 
 enum {
@@ -50,6 +52,11 @@ enum {
 	CONTROL_SET,
 }
 
+var init_thread: Thread = null
+var resource_thread: Thread = null
+var node_thread: Thread = null
+var tag_thread: Thread = null
+
 var event_data := {}
 var current_fragment := []
 var current_root_fragment_index := 0
@@ -60,6 +67,7 @@ var line_indices: Array[int] = [0]
 var current_line_object: DeltascriptLine = null
 var all_active_lines := {}
 
+var cached_nodes := {}
 var cached_sounds := {}
 var cached_resources := {}
 var metadata := {}
@@ -80,20 +88,39 @@ var while_index_stack: Array[int] = []
 var while_level_internal := 0
 
 var interpolation_regex := RegEx.new()
+	
+	
+func _exit_tree() -> void:
+	if init_thread != null and init_thread.is_started():
+		init_thread.wait_to_finish()
+		
+	if node_thread != null and node_thread.is_started():
+		node_thread.wait_to_finish()
+	
+	if resource_thread != null and resource_thread.is_started():
+		resource_thread.wait_to_finish()
+		
+	if tag_thread != null and tag_thread.is_started():
+		tag_thread.wait_to_finish()
 
-func _ready() -> void:
-	var dialogue_script_path: String = ProjectSettings.get_setting(&"deltascript/scripts/dialogue_script", String())
+			
+func initial_load() -> void:
+	var dialogue_script_path = ProjectSettings.get_setting(&"deltascript/scripts/dialogue_script", String())
 	if not dialogue_script_path.is_empty():
 		dialogue_script = load(dialogue_script_path) as GDScript
 		
-	var choice_script_path: String = ProjectSettings.get_setting(&"deltascript/scripts/choice_script", String())
+	var choice_script_path = ProjectSettings.get_setting(&"deltascript/scripts/choice_script", String())
 	if not choice_script_path.is_empty():
 		choice_script = load(choice_script_path) as GDScript
 		
-	tag_scripts = ProjectSettings.get_setting(&"deltascript/scripts/tag_scripts", DeltascriptGlobals.DEFAULT_TAGS)
+	tag_scripts = ProjectSettings.get_setting(&"deltascript/scripts/tag_scripts", {})
+	tag_scripts.merge(DeltascriptGlobals.DEFAULT_TAGS)
+	
 	metadata = ProjectSettings.get_setting(&"deltascript/event_playback/default_event_metadata", {})
 	
 	interpolation_regex.compile("\\{(\\w+)}")
+
+	play_event_post.call_deferred()
 
 
 func play_event(event: DeltascriptEventCompiled, force_localization_off: bool = false) -> void:
@@ -101,6 +128,14 @@ func play_event(event: DeltascriptEventCompiled, force_localization_off: bool = 
 	set_message_translation(not force_localization_off)
 	current_fragment = event_data[ROOT_FRAGMENTS][DeltascriptGlobals.STARTING_FRAGMENT]
 	fragment_order = event_data[ROOT_FRAGMENT_ORDER]
+	
+	init_thread = Thread.new()
+	init_thread.start(initial_load)
+	
+	
+func play_event_post() -> void:
+	print("TEST LOAD")
+	init_thread.wait_to_finish()
 	run_next_line()
 	
 	
@@ -119,11 +154,12 @@ func run_next_line() -> void:
 	var script: DeltascriptLine
 	
 	var line_skipped := false
+	var wait_for_load := false
 	match this_line[LINE_FIELD_TYPE]:
 		LINE_STRING:
 			if not should_skip_line():
 				if dialogue_script != null:
-					var script_dlg: DeltascriptLineDialogueBase = dialogue_script.new()
+					var script_dlg: DeltascriptTagDialogueBase = dialogue_script.new()
 					script_dlg.line_text = interpolate_string(tr(this_line[LINE_FIELD_VALUE]))
 					script = script_dlg
 			else:
@@ -133,10 +169,12 @@ func run_next_line() -> void:
 				var tag: Dictionary = this_line[LINE_FIELD_VALUE]
 				var tag_ident: StringName = tag[TAG_FIELD_TAG]
 				if tag_scripts.has(tag_ident):
-					var script_tag: DeltascriptTag = load(tag_scripts[tag_ident]).new()
-					script_tag.arguments = tag[TAG_FIELD_ARGS]
-					script_tag.named_arguments = tag[TAG_FIELD_NAMEDARGS]
-					script = script_tag
+					if tag_thread != null and tag_thread.is_started():
+						tag_thread.wait_to_finish()
+					
+					tag_thread = Thread.new()
+					tag_thread.start(load_tag.bind(tag, tag_ident))
+					wait_for_load = true
 			else:
 				line_skipped = true
 		LINE_CHOICE:
@@ -149,7 +187,7 @@ func run_next_line() -> void:
 						choice_texts.push_back(interpolate_string(tr(choice[CHOICE_FIELD_CHOICE])))
 						choice_results.push_back(choice[CHOICE_FIELD_RESULT])
 					
-					var script_choice: DeltascriptLineChoiceBase = choice_script.new()
+					var script_choice: DeltascriptTagChoiceBase = choice_script.new()
 					script_choice.line_choice_texts = choice_texts
 					script_choice.line_choice_results = choice_results
 					script = script_choice
@@ -246,15 +284,29 @@ func run_next_line() -> void:
 				return
 					
 	if not line_skipped:
-		current_line_object = script
-		all_active_lines[current_line_object] = true
-		script.event_player = self
-		script.tree_context = get_tree()
-		script.line_completed.connect(_on_line_completed)
-		script.line_finalized.connect(_on_line_finalized)
-		script._line_start()
+		if not wait_for_load:
+			run_tag_post_load(script)
 	else:
 		skip_this_line.call_deferred()
+		
+		
+func load_tag(tag: Dictionary, tag_ident: StringName) -> void:
+	var script_tag: DeltascriptTag = load(tag_scripts[tag_ident]).new()
+	script_tag.arguments = tag[TAG_FIELD_ARGS]
+	script_tag.named_arguments = tag[TAG_FIELD_NAMEDARGS]
+	
+	print("TAG LOADED")
+	run_tag_post_load.call_deferred(script_tag)
+		
+		
+func run_tag_post_load(script: DeltascriptLine) -> void:
+	current_line_object = script
+	all_active_lines[current_line_object] = true
+	script.event_player = self
+	script.tree_context = get_tree()
+	script.line_completed.connect(_on_line_completed_defer)
+	script.line_finalized.connect(_on_line_finalized)
+	script._line_start()
 	
 	
 func get_event_metadata(key: StringName) -> Variant:
@@ -265,20 +317,57 @@ func set_event_metadata(key: StringName, value: Variant) -> void:
 	metadata[key] = value
 	
 	
-func cache_resource(key: StringName, resource: Resource) -> void:
-	cached_resources[key] = resource
+func cache_node(key: StringName, path: NodePath) -> void:
+	if node_thread != null and node_thread.is_started():
+		node_thread.wait_to_finish()
+		
+	node_thread = Thread.new()
+	node_thread.start(cache_node_thread.bind(key, path))
+	
+	
+func cache_node_thread(key: StringName, path: NodePath) -> void:
+	cached_nodes[key] = get_tree().current_scene.get_node(path)
+	print("NODE CACHED")
+	cache_node_finished.call_deferred()
+	
+	
+func cache_node_finished() -> void:
+	load_complete.emit()
+	
+	
+func get_cached_node(key: StringName) -> Node:
+	return cached_nodes.get(key)
+	
+	
+func load_resource(key: StringName, path: String) -> void:
+	if resource_thread != null and resource_thread.is_started():
+		resource_thread.wait_to_finish()
+		
+	resource_thread = Thread.new()
+	resource_thread.start(load_resource_thread.bind(key, path))
+	
+	
+func load_resource_thread(key: StringName, path: String) -> void:
+	var resource := load(path) as Resource
+	if resource is AudioStream:
+		cached_sounds[key] = resource
+	else:
+		cached_resources[key] = resource
+		
+	print("RESOURCE LOADED")
+	load_resource_finished.call_deferred()
+
+
+func load_resource_finished() -> void:
+	load_complete.emit()
 
 	
 func get_cached_resource(key: StringName) -> Resource:
-	return cached_resources[key]
+	return cached_resources.get(key)
 	
-	
-func cache_sound_resource(key: StringName, resource: AudioStream) -> void:
-	cached_sounds[key] = resource
-	
-	
+
 func get_cached_sound_resource(key: StringName) -> AudioStream:
-	return cached_sounds[key]
+	return cached_sounds.get(key)
 	
 	
 func interpolate_string(what: String) -> String:
@@ -294,6 +383,10 @@ func interpolate_string(what: String) -> String:
 	
 func skip_this_line() -> void:
 	_on_line_completed([])
+	
+	
+func _on_line_completed_defer(next_fragment_override: Array) -> void:
+	_on_line_completed.call_deferred(next_fragment_override)
 	
 	
 func _on_line_completed(next_fragment_override: Array) -> void:

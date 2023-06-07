@@ -25,7 +25,7 @@ func add_custom_project_setting(name_: String, default_value: Variant, type: int
 func _enter_tree() -> void:
 	add_custom_project_setting("deltascript/scripts/dialogue_script", String(), TYPE_STRING, PROPERTY_HINT_FILE, "*.gd")
 	add_custom_project_setting("deltascript/scripts/choice_script", String(), TYPE_STRING, PROPERTY_HINT_FILE, "*.gd")
-	add_custom_project_setting("deltascript/scripts/tag_scripts", DeltascriptGlobals.DEFAULT_TAGS, TYPE_DICTIONARY)
+	add_custom_project_setting("deltascript/scripts/tag_scripts", {}, TYPE_DICTIONARY)
 	add_custom_project_setting("deltascript/event_playback/default_event_metadata", {}, TYPE_DICTIONARY)
 	
 	editor = preload("res://addons/deltascript/editor/deltascript_editor_panel.tscn").instantiate() as Panel

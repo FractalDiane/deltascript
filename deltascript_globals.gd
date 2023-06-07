@@ -11,5 +11,6 @@ const DEFAULT_TAGS := {
 	
 	&"wait": "res://addons/deltascript/lines/builtin_tags/deltascript_tag_wait.gd",
 	
+	&"cache": "res://addons/deltascript/lines/builtin_tags/deltascript_tag_cache.gd",
 	&"rcache": "res://addons/deltascript/lines/builtin_tags/deltascript_tag_rcache.gd",
 }
