@@ -134,7 +134,6 @@ func play_event(event: DeltascriptEventCompiled, force_localization_off: bool = 
 	
 	
 func play_event_post() -> void:
-	print("TEST LOAD")
 	init_thread.wait_to_finish()
 	run_next_line()
 	
@@ -295,7 +294,6 @@ func load_tag(tag: Dictionary, tag_ident: StringName) -> void:
 	script_tag.arguments = tag[TAG_FIELD_ARGS]
 	script_tag.named_arguments = tag[TAG_FIELD_NAMEDARGS]
 	
-	print("TAG LOADED")
 	run_tag_post_load.call_deferred(script_tag)
 		
 		
@@ -327,7 +325,6 @@ func cache_node(key: StringName, path: NodePath) -> void:
 	
 func cache_node_thread(key: StringName, path: NodePath) -> void:
 	cached_nodes[key] = get_tree().current_scene.get_node(path)
-	print("NODE CACHED")
 	cache_node_finished.call_deferred()
 	
 	
@@ -354,7 +351,6 @@ func load_resource_thread(key: StringName, path: String) -> void:
 	else:
 		cached_resources[key] = resource
 		
-	print("RESOURCE LOADED")
 	load_resource_finished.call_deferred()
 
 
