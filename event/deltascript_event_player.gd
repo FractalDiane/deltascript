@@ -8,6 +8,8 @@ signal event_finished()
 enum {
 	ROOT_FRAGMENTS,
 	ROOT_FRAGMENT_ORDER,
+	ROOT_CACHED_RESOURCES,
+	ROOT_CACHED_NODES,
 }
 
 enum {
@@ -104,7 +106,7 @@ func _exit_tree() -> void:
 		tag_thread.wait_to_finish()
 
 			
-func initial_load() -> void:
+func initial_load(cached_resources_: Dictionary, cached_nodes_: Dictionary) -> void:
 	var dialogue_script_path: String = ProjectSettings.get_setting(&"deltascript/scripts/dialogue_script", String())
 	if not dialogue_script_path.is_empty():
 		dialogue_script = load(dialogue_script_path) as GDScript
@@ -119,6 +121,16 @@ func initial_load() -> void:
 	metadata = ProjectSettings.get_setting(&"deltascript/event_playback/default_event_metadata", {})
 	
 	interpolation_regex.compile("\\{(\\w+)}")
+	
+	for key in cached_resources_:
+		var this_resource := load(cached_resources_[key]) as Resource
+		if this_resource is AudioStream:
+			cached_sounds[key] = this_resource
+		else:
+			cached_resources[key] = this_resource
+			
+	for key in cached_nodes_:
+		cached_nodes[key] = get_tree().current_scene.get_node(cached_nodes_[key])
 
 	play_event_post.call_deferred()
 
@@ -130,7 +142,7 @@ func play_event(event: DeltascriptEventCompiled, force_localization_off: bool = 
 	fragment_order = event_data[ROOT_FRAGMENT_ORDER]
 	
 	init_thread = Thread.new()
-	init_thread.start(initial_load)
+	init_thread.start(initial_load.bind(event.event_data[ROOT_CACHED_RESOURCES], event.event_data[ROOT_CACHED_NODES]))
 	
 	
 func play_event_post() -> void:

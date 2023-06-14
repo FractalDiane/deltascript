@@ -1,6 +1,6 @@
 @tool
-class_name DeltascriptEditorPanel
-extends Panel
+class_name DeltascriptCompiler
+extends RefCounted
 
 var target_file := String()
 var target_dir := "res://"
@@ -19,80 +19,12 @@ const CONTROL_LINES := {
 	&"set": DeltascriptEventPlayer.CONTROL_SET,
 }
 
-@onready var file_edit := $VBoxContainer/HBoxContainer/LineEditFile as LineEdit
-@onready var dir_edit := $VBoxContainer/HBoxContainer2/LineEditFolder as LineEdit
+# ==================================================================================================
 
 func _ready() -> void:
 	alpha_regex.compile("\\w[A-Za-z_]+\\w")
 
-func _on_line_edit_file_text_submitted(new_text: String) -> void:
-	target_file = new_text
-
-
-func _on_line_edit_folder_text_submitted(new_text: String) -> void:
-	target_dir = new_text
-
-
-func _on_button_pick_file_pressed() -> void:
-	var dialog := EditorFileDialog.new()
-	dialog.min_size = Vector2(768, 512)
-	dialog.file_mode = EditorFileDialog.FILE_MODE_OPEN_FILE
-	dialog.filters = PackedStringArray(["*.tres ; Deltascript Events"])
-	dialog.file_selected.connect(_on_file_dialog_file_selected, CONNECT_ONE_SHOT)
-	dialog.close_requested.connect(queue_free, CONNECT_ONE_SHOT)
-	
-	add_child(dialog)
-	dialog.popup_centered()
-	
-	
-func _on_button_pick_folder_pressed() -> void:
-	var dialog := EditorFileDialog.new()
-	dialog.rect_min_size = Vector2(768, 512)
-	dialog.file_mode = EditorFileDialog.FILE_MODE_OPEN_DIR
-	dialog.file_selected.connect(_on_file_dialog_dir_selected, CONNECT_ONE_SHOT)
-	dialog.close_requested.connect(queue_free, CONNECT_ONE_SHOT)
-	
-	add_child(dialog)
-	dialog.popup_centered()
-	
-	
-func _on_file_dialog_file_selected(file: String) -> void:
-	target_file = file
-	file_edit.text = file
-	
-
-func _on_file_dialog_dir_selected(dir: String) -> void:
-	target_dir = dir
-	dir_edit.text = dir
-
-
-#func _on_button_compile_one_pressed() -> void:
-#	compile_file(target_file)
-
-
-#func _on_button_compile_all_pressed() -> void:
-#	var files := get_all_files(target_dir)
-#	for file in files:
-#		compile_file(file)
-		
 # ==================================================================================================
-
-func get_all_files(path: String, files := []) -> Array[String]:
-	var dir := DirAccess.open(target_dir)
-	if dir != null:
-		var file_name := dir.get_next()
-		while not file_name.is_empty():
-			if dir.current_is_dir():
-				files = get_all_files(dir.get_current_dir().path_join(file_name), files)
-			else:
-				files.append(file_name)
-			
-			file_name = dir.get_next()
-	else:
-		push_error("Deltascript: Failed to open compile directory %s" % target_dir)
-		
-	return files
-	
 	
 func parse_variant(what: String) -> Variant:
 	if what.is_valid_int():
@@ -204,9 +136,6 @@ func compile_file(file: DeltascriptEvent) -> void:
 					choice_stack.push_back(" ".join(PackedStringArray(trimmed.slice(1, len(trimmed) - 1))))
 					list_stack.push_back([])
 			"-":
-				#if len(line_trimmed) > 1 and line_trimmed[1] == '>':
-				#	list_stack[-1].push_back({DeltascriptEventPlayer.LINE_FIELD_TYPE: DeltascriptEventPlayer.LINE_JUMP, DeltascriptEventPlayer.LINE_FIELD_VALUE: StringName(line_trimmed.get_slice(" ", 1))})
-				#else:
 				var choice_dict := {}
 				choice_dict[DeltascriptEventPlayer.CHOICE_FIELD_CHOICE] = choice_stack[-1]
 				choice_stack.pop_back()
@@ -231,6 +160,20 @@ func compile_file(file: DeltascriptEvent) -> void:
 	root_dict[DeltascriptEventPlayer.ROOT_FRAGMENTS][current_fragment] = list_stack[0]
 	root_dict[DeltascriptEventPlayer.ROOT_FRAGMENT_ORDER] = fragment_order.duplicate()
 	
+	var cached_resources := {}
+	for entry in file.cached_resources:
+		var this_entry := entry as CachedResource
+		cached_resources[this_entry.identifier] = this_entry.path
+		
+	root_dict[DeltascriptEventPlayer.ROOT_CACHED_RESOURCES] = cached_resources
+	
+	var cached_nodes := {}
+	for entry in file.cached_nodes:
+		var this_entry := entry as CachedNode
+		cached_nodes[this_entry.identifier] = this_entry.path
+		
+	root_dict[DeltascriptEventPlayer.ROOT_CACHED_NODES] = cached_nodes
+	
 	var out_res := DeltascriptEventCompiled.new()
 	out_res.event_data = root_dict.duplicate(true)
 	var out_path := file.get_path().replace(".tres", "_C.res")
@@ -240,9 +183,3 @@ func compile_file(file: DeltascriptEvent) -> void:
 		print(root_dict)
 	else:
 		push_error("Failed to save compiled Deltascript event %s: %s" % [out_path, err])
-		
-# ==================================================================================================
-
-#func _on_resource_saved(resource: Resource) -> void:
-#	if resource is DeltascriptEvent:
-#		compile_file(resource.get_path())

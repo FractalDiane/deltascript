@@ -3,7 +3,8 @@ extends EditorPlugin
 
 var compile_event_hash := "Compile Event".hash()
 
-var editor: DeltascriptEditorPanel = null
+#var editor: DeltascriptEditorPanel = null
+var compiler: DeltascriptCompiler = null
 var inspector_plugin: DeltascriptInspectorPlugin = null
 
 func add_custom_project_setting(name_: String, default_value: Variant, type: int, hint: int = PROPERTY_HINT_NONE, hint_string := String()) -> void:
@@ -28,8 +29,9 @@ func _enter_tree() -> void:
 	add_custom_project_setting("deltascript/scripts/tag_scripts", {}, TYPE_DICTIONARY)
 	add_custom_project_setting("deltascript/event_playback/default_event_metadata", {}, TYPE_DICTIONARY)
 	
-	editor = preload("res://addons/deltascript/editor/deltascript_editor_panel.tscn").instantiate() as Panel
-	add_control_to_dock(EditorPlugin.DOCK_SLOT_RIGHT_BL, editor)
+	#editor = preload("res://addons/deltascript/editor/deltascript_editor_panel.tscn").instantiate() as Panel
+	#add_control_to_dock(EditorPlugin.DOCK_SLOT_RIGHT_BL, editor)
+	compiler = DeltascriptCompiler.new()
 	
 	inspector_plugin = preload("res://addons/deltascript/editor/deltascript_inspector_plugin.gd").new()
 	inspector_plugin.editor_settings = get_editor_interface().get_editor_settings()
@@ -58,18 +60,18 @@ func _on_context_menu_popup(context_menu: PopupMenu) -> void:
 
 func _on_context_menu_id_pressed(id: int) -> void:
 	if id == compile_event_hash:
-		editor.compile_file(load(get_editor_interface().get_current_path()) as DeltascriptEvent)
+		compiler.compile_file(load(get_editor_interface().get_current_path()) as DeltascriptEvent)
 
 
 func _on_compile_requested(event: DeltascriptEvent) -> void:
-	editor.compile_file(event)
+	compiler.compile_file(event)
 
 
 func _exit_tree() -> void:
 	remove_autoload_singleton("Deltascript")
 	remove_inspector_plugin(inspector_plugin)
-	remove_control_from_docks(editor)
-	editor.free()
+	#remove_control_from_docks(editor)
+	#editor.free()
 	
 	
 func _get_plugin_name() -> String:
