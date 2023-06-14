@@ -122,7 +122,8 @@ func compile_file(file: DeltascriptEvent) -> void:
 				var level := len(line_trimmed.get_slice(" ", 0))
 				if level > len(choice_stack):
 					var trimmed := Array(line_trimmed.split(" "))
-					choice_stack.push_back(" ".join(PackedStringArray(trimmed.slice(1, len(trimmed) - 1))))
+					choice_stack.push_back(" ".join(PackedStringArray(trimmed.slice(1))))
+					print(choice_stack)
 					list_stack.push_back([])
 					choice_batch_stack.push_back([])
 				else:
@@ -132,8 +133,9 @@ func compile_file(file: DeltascriptEvent) -> void:
 					choice_dict[DeltascriptEventPlayer.CHOICE_FIELD_RESULT] = list_stack[-1].duplicate(true)
 					list_stack.pop_back()
 					choice_batch_stack[-1].push_back(choice_dict)
+					print(choice_batch_stack)
 					var trimmed := Array(line_trimmed.split(" "))
-					choice_stack.push_back(" ".join(PackedStringArray(trimmed.slice(1, len(trimmed) - 1))))
+					choice_stack.push_back(" ".join(PackedStringArray(trimmed.slice(1))))
 					list_stack.push_back([])
 			"-":
 				var choice_dict := {}

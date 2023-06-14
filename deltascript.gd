@@ -3,7 +3,6 @@ extends EditorPlugin
 
 var compile_event_hash := "Compile Event".hash()
 
-#var editor: DeltascriptEditorPanel = null
 var compiler: DeltascriptCompiler = null
 var inspector_plugin: DeltascriptInspectorPlugin = null
 
@@ -29,8 +28,6 @@ func _enter_tree() -> void:
 	add_custom_project_setting("deltascript/scripts/tag_scripts", {}, TYPE_DICTIONARY)
 	add_custom_project_setting("deltascript/event_playback/default_event_metadata", {}, TYPE_DICTIONARY)
 	
-	#editor = preload("res://addons/deltascript/editor/deltascript_editor_panel.tscn").instantiate() as Panel
-	#add_control_to_dock(EditorPlugin.DOCK_SLOT_RIGHT_BL, editor)
 	compiler = DeltascriptCompiler.new()
 	
 	inspector_plugin = preload("res://addons/deltascript/editor/deltascript_inspector_plugin.gd").new()
@@ -70,9 +67,7 @@ func _on_compile_requested(event: DeltascriptEvent) -> void:
 func _exit_tree() -> void:
 	remove_autoload_singleton("Deltascript")
 	remove_inspector_plugin(inspector_plugin)
-	#remove_control_from_docks(editor)
-	#editor.free()
-	
-	
+
+
 func _get_plugin_name() -> String:
 	return "Deltascript"

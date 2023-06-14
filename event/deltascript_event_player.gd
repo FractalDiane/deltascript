@@ -173,6 +173,9 @@ func run_next_line() -> void:
 					var script_dlg: DeltascriptTagDialogueBase = dialogue_script.new()
 					script_dlg.line_text = interpolate_string(tr(this_line[LINE_FIELD_VALUE]))
 					script = script_dlg
+				else:
+					line_skipped = true
+					push_error("Deltascript: No dialogue script set in project settings; skipping dialogue line")
 			else:
 				line_skipped = true
 		LINE_TAG:
@@ -202,6 +205,9 @@ func run_next_line() -> void:
 					script_choice.line_choice_texts = choice_texts
 					script_choice.line_choice_results = choice_results
 					script = script_choice
+				else:
+					line_skipped = true
+					push_error("Deltascript: No choice script set in project settings; skipping choice")
 			else:
 				line_skipped = true
 		LINE_CONTROL:
