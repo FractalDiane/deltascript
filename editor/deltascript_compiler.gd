@@ -123,7 +123,6 @@ func compile_file(file: DeltascriptEvent) -> void:
 				if level > len(choice_stack):
 					var trimmed := Array(line_trimmed.split(" "))
 					choice_stack.push_back(" ".join(PackedStringArray(trimmed.slice(1))))
-					print(choice_stack)
 					list_stack.push_back([])
 					choice_batch_stack.push_back([])
 				else:
@@ -133,7 +132,6 @@ func compile_file(file: DeltascriptEvent) -> void:
 					choice_dict[DeltascriptEventPlayer.CHOICE_FIELD_RESULT] = list_stack[-1].duplicate(true)
 					list_stack.pop_back()
 					choice_batch_stack[-1].push_back(choice_dict)
-					print(choice_batch_stack)
 					var trimmed := Array(line_trimmed.split(" "))
 					choice_stack.push_back(" ".join(PackedStringArray(trimmed.slice(1))))
 					list_stack.push_back([])
@@ -182,6 +180,6 @@ func compile_file(file: DeltascriptEvent) -> void:
 	var err := ResourceSaver.save(out_res, out_path)
 	if err == OK:
 		print("Compiled Deltascript event %s" % out_path)
-		print(root_dict)
+		print_verbose(root_dict)
 	else:
 		push_error("Failed to save compiled Deltascript event %s: %s" % [out_path, err])
