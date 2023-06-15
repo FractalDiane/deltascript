@@ -13,3 +13,6 @@ func _line_start() -> void:
 	player.play()
 	
 	goto_next_line()
+
+func _get_tag_identifier() -> StringName:
+	return &"sound"

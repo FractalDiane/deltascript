@@ -115,7 +115,7 @@ func initial_load(cached_resources_: Dictionary, cached_nodes_: Dictionary) -> v
 	if not choice_script_path.is_empty():
 		choice_script = load(choice_script_path) as GDScript
 		
-	tag_scripts = ProjectSettings.get_setting(&"deltascript/scripts/tag_scripts", {})
+	tag_scripts = Deltascript.user_tags
 	tag_scripts.merge(DeltascriptGlobals.DEFAULT_TAGS)
 	
 	metadata = ProjectSettings.get_setting(&"deltascript/event_playback/default_event_metadata", {})
