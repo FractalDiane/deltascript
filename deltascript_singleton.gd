@@ -15,6 +15,6 @@ func _ready() -> void:
 
 func play_event(event: DeltascriptEventCompiled, force_localization_off: bool = false) -> DeltascriptEventPlayer:
 	var player := DeltascriptEventPlayer.new()
-	get_tree().get_root().add_child(player)
+	get_tree().get_root().add_child.call_deferred(player)
 	player.play_event.call_deferred(event, force_localization_off)
 	return player
